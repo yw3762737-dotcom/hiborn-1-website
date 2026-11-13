@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#030506">
+<title>海本精造 · HIBORN</title>
+<style>
+  :root{color-scheme:dark;--ink:#d5d6d4;--muted:#697071;--line:rgba(179,188,185,.18);--gold:#d4bc92}
+  *{box-sizing:border-box}
+  html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#030506}
+  body{font-family:Arial,"Microsoft YaHei",sans-serif;color:var(--ink);user-select:none;-webkit-user-select:none}
+  canvas{display:block;width:100%;height:100%;touch-action:none;cursor:grab;outline:none}
+  canvas:active{cursor:grabbing}
+  canvas:focus-visible{outline:1px solid var(--gold);outline-offset:-6px}
+  .vignette{position:fixed;inset:0;pointer-events:none;background:radial-gradient(ellipse at 53% 48%,transparent 25%,rgba(0,0,0,.12) 65%,rgba(0,0,0,.7) 110%)}
+  .noise{position:fixed;inset:0;opacity:.065;pointer-events:none;background:repeating-linear-gradient(0deg,transparent 0 2px,rgba(171,184,178,.11) 3px 3.5px);mix-blend-mode:screen}
+  .toolbar{position:fixed;right:max(28px,env(safe-area-inset-right));bottom:max(25px,env(safe-area-inset-bottom));display:flex;align-items:center;gap:5px;padding:6px;border:1px solid rgba(170,183,176,.14);border-radius:8px;background:rgba(8,11,12,.76);backdrop-filter:blur(14px);transition:opacity .8s,transform .8s;z-index:5}
+  body.quiet .toolbar{opacity:.22;transform:translateY(2px)}
+  .toolbar:hover,.toolbar:focus-within{opacity:1!important;transform:none!important}
+  button{appearance:none;border:0;font:inherit;cursor:pointer;color:#a1aaa7;background:none}
+  .tool{width:35px;height:35px;border:1px solid transparent;border-radius:5px;display:grid;place-items:center;transition:background .2s,color .2s,border-color .2s;position:relative}
+  .tool:hover,.tool:focus-visible{background:#161c1d;color:#edf0eb;border-color:#35403e;outline:none}
+  .tool[aria-pressed=true]{color:var(--gold)}
+  .tool svg{width:16px;height:16px;stroke:currentColor;stroke-width:1.35;fill:none;stroke-linecap:round;stroke-linejoin:round}
+  .tool:after{content:attr(data-tip);position:absolute;bottom:48px;right:-6px;font-size:11px;letter-spacing:1px;white-space:nowrap;padding:8px 10px;background:#111718;border:1px solid #2c3533;border-radius:4px;opacity:0;transform:translateY(4px);transition:.15s;pointer-events:none}
+  .tool:hover:after,.tool:focus-visible:after{opacity:1;transform:none}
+  .sep{height:17px;width:1px;background:#29312f;margin:0 4px}
+  .intro{position:fixed;left:32px;bottom:35px;color:#737c79;font-size:10px;letter-spacing:2px;pointer-events:none;opacity:0;animation:intro 8s 1.2s both}
+  .intro small{display:block;margin-top:6px;font-size:9px;letter-spacing:.6px;color:#626d70}
+  @keyframes intro{0%,100%{opacity:0}12%,65%{opacity:.7}}
+  .corner{position:fixed;pointer-events:none;width:17px;height:17px;opacity:.16}
+  .corner.a{left:25px;top:25px;border-left:1px solid #91a19a;border-top:1px solid #91a19a}
+  .corner.b{right:25px;top:25px;border-right:1px solid #91a19a;border-top:1px solid #91a19a}
+  .detail{position:fixed;left:34px;top:50%;transform:translateY(-46%);width:min(340px,calc(100vw - 68px));min-height:156px;padding:24px 26px 26px;border:1px solid #5a5548;border-left:2px solid #b5a17c;background:rgba(4,8,9,.93);backdrop-filter:blur(18px);opacity:0;pointer-events:none;transition:opacity .35s,transform .35s;z-index:4;box-shadow:0 15px 70px #0008}
+  .detail.open{opacity:1;transform:translateY(-50%);pointer-events:auto}
+  .detail .close{position:absolute;right:10px;top:8px;width:28px;height:28px;font-size:20px;font-weight:200;color:#77817a}
+  .detail h1 small{display:block;font-size:11px;letter-spacing:.7px;line-height:1.6;color:#ad967b;margin-top:5px}
+  .detail h1{font-size:20px;font-weight:400;letter-spacing:2px;line-height:1.5;margin:0 16px 12px 0;color:#d4c5a7}
+  .detail p{font-size:13px;line-height:1.9;letter-spacing:.6px;white-space:pre-wrap;margin:0;color:#9eaaa6}
+  .detail:before,.detail:after{content:"";display:block;position:absolute;left:25px;right:25px;height:1px;background:linear-gradient(90deg,#9d8b6744,transparent)}
+  .detail:before{top:49px}.detail:after{bottom:22px}
+  .help{position:fixed;inset:0;display:grid;place-items:center;background:#0009;z-index:10;backdrop-filter:blur(10px)}
+  .help[hidden]{display:none}
+  .help-box{width:min(390px,calc(100vw - 44px));padding:29px 31px 24px;border:1px solid #333d37;background:#0b1011;box-shadow:0 20px 100px #000}
+  .help h2{font-weight:400;font-size:16px;letter-spacing:3px;color:#d0cabd;margin:0 0 24px}
+  .help dl{font-size:12px;color:#99a39e;margin:0;line-height:2.8;display:grid;grid-template-columns:1fr auto;gap:0 25px}
+  .help dd{margin:0;color:#d1d6d1}.help dt{border-bottom:1px solid #192220}.help dd{border-bottom:1px solid #192220}
+  .help button{margin-top:24px;padding:10px 0;width:100%;border:1px solid #303c36;color:#b9c3ba;font-size:11px;letter-spacing:3px}
+  .help small{display:block;font-size:9px;font-weight:400;letter-spacing:.4px;line-height:1.4;color:#68777b}
+  .help dt{padding:6px 0;line-height:1.7}
+  .help h2 small{margin-top:6px}
+  .help button small{margin-top:5px}
+  .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
+  @media(max-width:650px){.toolbar{right:15px;bottom:18px;gap:2px;padding:4px}.tool{width:33px;height:33px}.intro{left:18px;bottom:77px;font-size:9px;letter-spacing:1px}.corner{display:none}.detail{left:20px;top:auto;bottom:83px;transform:translateY(12px);min-height:130px}.detail.open{transform:none}.detail h1{font-size:17px}.detail p{font-size:12px}}
+  @media(prefers-reduced-motion:reduce){.intro{animation:none}.toolbar,.detail{transition:none}}
+</style>
+<link rel="stylesheet" href="reader.css"><link rel="stylesheet" href="ring-motion.css"></head>
+<body class="awaiting-entry">
+<canvas id="halo" tabindex="0" aria-label="正视光环，拖动可在平面内旋转，悬停环段可高亮并停转，点击进入栏目"></canvas>
+<section class="entry-gate" id="entryGate" aria-label="HIBORN"><button class="entry-o-trigger" id="enterSound" type="button" aria-label="点击 HIBORN 中的 O，打开圆形索引"><span class="sr">HIBORN · 点击 O 进入</span></button></section>
+<aside id="orbitMenu" class="orbit-menu" hidden aria-label="栏目分项"><svg id="orbitSvg" aria-label="圆环分项" xmlns="http://www.w3.org/2000/svg"></svg><div id="orbitSheet" class="orbit-sheet"></div></aside>
+<div class="vignette"></div><div class="noise"></div>
+<div class="corner a"></div><div class="corner b"></div>
+<div class="intro" aria-hidden="true">悬停展开分项　·　点击进入　·　拖动旋转<small>Hover to explore · Click to open · Drag to rotate</small></div>
+<section class="detail" id="detail" aria-live="polite" aria-label="环段内容" hidden>
+  <button class="close" aria-label="关闭内容">×</button>
+  <h1 id="detail-title"></h1><p id="detail-body"></p>
+</section>
+<nav class="toolbar" aria-label="画面控制">
+  <button class="tool" id="pause" data-tip="暂停旋转 · 空格" aria-label="暂停旋转" aria-pressed="false"><svg viewBox="0 0 24 24"><path id="pause-icon" d="M8 5v14M16 5v14"/></svg></button>
+  <button class="tool" id="view" data-tip="切换近景 · V" aria-label="切换近景" aria-pressed="false"><svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5M10.5 7.5v6M7.5 10.5h6"/></svg></button>
+  <button class="tool" id="reset" data-tip="复位 · R" aria-label="复位"><svg viewBox="0 0 24 24"><path d="M5 8a8 8 0 1 1-1 7M5 3v5h5"/></svg></button>
+  <button class="tool" id="sound" data-tip="声音 · S" aria-label="开启声音" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="M4 9h4l5-4v14l-5-4H4Z"/><path id="sound-waves" d="m17 9 5 6m0-6-5 6"/></svg></button><button class="tool" id="replay" data-tip="重播入场" aria-label="重播入场动画"><svg viewBox="0 0 24 24"><path d="M6 5v14l13-7Z"/><path d="M3 5v14"/></svg></button><span class="sep"></span>
+  <button class="tool" id="fullscreen" data-tip="全屏 · F" aria-label="全屏"><svg viewBox="0 0 24 24"><path d="M9 4H4v5M15 4h5v5M4 15v5h5M20 15v5h-5"/></svg></button>
+  <button class="tool" id="help-button" data-tip="操作说明 · ?" aria-label="操作说明"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 8.5a2.7 2.7 0 1 1 4.6 2c-1.2.8-2.1 1.2-2.1 3M12 17h.01"/></svg></button>
+</nav>
+<aside class="help" id="help" hidden role="dialog" aria-modal="true" aria-labelledby="help-title">
+  <div class="help-box">
+    <h2 id="help-title">画面操作<small>Ring controls</small></h2>
+    <dl>
+      <dt>在平面内旋转<small>Rotate in plane</small></dt><dd>沿圆周拖动<small>Drag around the ring</small></dd>
+      <dt>点亮环段并停转<small>Illuminate and hold</small></dt><dd>悬停<small>Hover</small></dd>
+      <dt>展开分项<small>Explore subcategories</small></dt><dd>悬停或触屏点按<small>Hover or tap a sector</small></dd><dt>声音 / 重播入场<small>Sound / replay entrance</small></dt><dd>S / 播放按钮<small>S / play button</small></dd><dt>进入栏目<small>Open chapter</small></dt><dd>点击环段<small>Select a sector</small></dd>
+      <dt>缩放<small>Zoom</small></dt><dd>滚轮 / 双指<small>Scroll / pinch</small></dd>
+      <dt>暂停 / 继续缓转<small>Pause / resume</small></dt><dd>空格<small>Space</small></dd>
+      <dt>全景 / 近景<small>Overview / close-up</small></dt><dd>V</dd>
+      <dt>复位<small>Reset</small></dt><dd>R</dd>
+      <dt>全屏<small>Fullscreen</small></dt><dd>F</dd>
+    </dl>
+    <button id="help-close">返回光环<small>Back to ring</small></button>
+  </div>
+</aside>
+<!-- Edit bilingual titles and curved child entries in halo-content. -->
+<script id="halo-content" type="application/json">[
+  {
+    "title": "简介",
+    "english": "Company Profile",
+    "children": [],
+    "subtitle": "",
+    "body": "",
+    "detail": ""
+  },
+  {
+    "title": "建成案例",
+    "english": "Completed Projects",
+    "children": [],
+    "subtitle": "",
+    "body": "",
+    "detail": ""
+  },
+  {
+    "title": "施工工艺展示",
+    "english": "Construction Details",
+    "children": [],
+    "subtitle": "",
+    "body": "",
+    "detail": ""
+  },
+  {
+    "title": "自主深化能力",
+    "english": "In-house Detailing",
+    "children": [],
+    "subtitle": "",
+    "body": "",
+    "detail": ""
+  },
+  {
+    "title": "新技术与系统应用",
+    "english": "New Technologies & Systems",
+    "children": [],
+    "subtitle": "",
+    "body": "",
+    "detail": ""
+  },
+  {
+    "title": "全过程管理",
+    "english": "Full-process Management",
+    "children": [],
+    "subtitle": "",
+    "body": "",
+    "detail": ""
+  }
+]</script>
+
+<details id="chapterIndex"><summary>目录 <span>INDEX</span></summary><nav aria-label="栏目目录"></nav></details>
+<dialog id="reader" aria-labelledby="chapterTitle">
+  <header class="reader-bar"><button class="back-ring" id="backRing" autofocus>← 返回圆环</button><div class="chapter-name"><strong id="chapterTitle"></strong><small id="chapterEnglish"></small></div><a id="liveLink" target="_blank" rel="noopener">打开官网 ↗</a></header>
+  <main id="chapterMain"></main>
+</dialog>
+<script src="catalog.js"></script><script src="ring.js?v=20261113-orbit-approach3"></script><script src="ring-menu.js"></script><script src="ring-audio.js"></script><script src="reader.js"></script>
+</body>
+</html>
